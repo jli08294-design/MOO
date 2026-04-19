@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
@@ -14,6 +14,13 @@ export function ActivitySelection() {
   const { user, supabaseUserId, updateUser } = useAuth();
   const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
 
+  // Initialize with user's existing activities
+  useEffect(() => {
+    if (user?.enabledActivities && user.enabledActivities.length > 0) {
+      setSelectedActivities(user.enabledActivities);
+    }
+  }, [user?.enabledActivities]);
+
   // Get the selected categories from user context
   const selectedCategories = (user?.selectedCategories || []) as Category[];
 
@@ -28,7 +35,7 @@ export function ActivitySelection() {
   const handleContinue = async () => {
     // Update local state
     updateUser({ enabledActivities: selectedActivities });
-    
+
     // Save to Supabase
     if (supabaseUserId) {
       await supabase.from('profiles').upsert({
@@ -36,7 +43,7 @@ export function ActivitySelection() {
         enabled_activities: selectedActivities,
       });
     }
-    
+
     navigate('/activity-profile');
   };
 
@@ -48,8 +55,10 @@ export function ActivitySelection() {
     { key: 'campusEvents', name: 'Campus Events' }
   ];
 
-  // Only show categories that were selected
-  const categories = allCategories.filter(cat => selectedCategories.includes(cat.key));
+  // Show categories that were selected, or all if none selected
+  const categories = selectedCategories.length > 0
+    ? allCategories.filter(cat => selectedCategories.includes(cat.key))
+    : allCategories;
 
   const renderActivities = (categoryKey: Category) => {
     const activities = ACTIVITIES[categoryKey];
